@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Histology Master</title>
+    <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #F0F4F8;
+            --btn-green: #12D11E;
+            --btn-green-dark: #0fb319;
+            --btn-blue: #2196F3;
+            --btn-blue-dark: #1976D2;
+            --correct-bg: #E8F5E9;
+            --correct-border: #2E7D32;
+            --wrong-bg: #FFEBEE;
+            --wrong-border: #C62828;
+            --progress-yellow: #FFC107;
+            --grey-border: #B0BEC5;
+            --grey-light: #ECEFF1;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Almarai', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg-color);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+
+        #app-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .screen {
+            display: none;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            position: absolute;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        #home-screen {
+            justify-content: center;
+        }
+
+        .btn-main {
+            width: 90%;
+            max-width: 400px;
+            background-color: var(--btn-green);
+            color: white;
+            padding: 25px;
+            margin: 15px 0;
+            border-radius: 25px;
+            border: none;
+            font-size: 32px;
+            font-weight: 800;
+            box-shadow: 0 8px 0 var(--btn-green-dark);
+            cursor: pointer;
+            transition: all 0.1s ease-in-out;
+        }
+
+        .btn-main:active {
+            transform: translateY(8px);
+            box-shadow: 0 0px 0 transparent !important;
+        }
+
+        .quiz-header {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar-bg {
+            flex-grow: 1;
+            height: 18px;
+            background: #E0E0E0;
+            border-radius: 10px;
+            margin: 0 15px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--progress-yellow);
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        .close-btn {
+            color: #D32F2F;
+            font-size: 35px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0 10px;
+        }
+
+        #round-info {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 15px;
+            color: #1976D2;
+            font-weight: 800;
+            font-size: 20px;
+        }
+
+        .question-box {
+            width: 100%;
+            max-width: 800px;
+            padding: 10px 15px;
+            text-align: left;
+            direction: ltr;
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #000;
+            font-weight: 800;
+            line-height: 1.4;
+            text-align: center;
+        }
+
+        .content-image {
+            display: block;
+            margin: 15px auto;
+            max-width: 100%;
+            max-height: 40vh;
+            border-radius: 10px;
+            border: 3px solid var(--grey-border);
+            object-fit: contain;
+            background-color: white;
+        }
+
+        .options-container {
+            width: 100%;
+            max-width: 800px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            padding-bottom: 100px;
+        }
+
+        @media (min-width: 600px) {
+            .options-container {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .option-btn {
+            border: 3px solid var(--grey-border);
+            border-radius: 20px;
+            padding: 18px 20px;
+            text-align: center; /* Center text since it's just names */
+            direction: ltr;
+            font-size: 20px;
+            font-weight: 800;
+            color: #000;
+            background: white;
+            box-shadow: 0 6px 0 var(--grey-border);
+            cursor: pointer;
+            transition: all 0.1s ease-in-out;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .option-btn.active-click:active {
+            transform: translateY(6px);
+            box-shadow: 0 0px 0 transparent;
+        }
+
+        .option-btn.correct {
+            background: var(--correct-bg) !important;
+            border-color: var(--correct-border) !important;
+            color: var(--correct-border) !important;
+            box-shadow: 0 6px 0 var(--correct-border);
+            pointer-events: none;
+        }
+
+        .option-btn.wrong {
+            background: var(--wrong-bg) !important;
+            border-color: var(--wrong-border) !important;
+            color: var(--wrong-border) !important;
+            box-shadow: 0 6px 0 var(--wrong-border);
+            pointer-events: none;
+        }
+
+        .option-btn.locked {
+            pointer-events: none;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px 20px;
+            background: white;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            z-index: 100;
+            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-btn {
+            flex: 1;
+            max-width: 390px;
+            color: white;
+            padding: 18px;
+            border-radius: 20px;
+            border: none;
+            font-size: 24px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .nav-btn.next {
+            background: var(--btn-green);
+            box-shadow: 0 6px 0 var(--btn-green-dark);
+        }
+
+        .nav-btn.prev {
+            background: var(--btn-blue);
+            box-shadow: 0 6px 0 var(--btn-blue-dark);
+        }
+
+        .nav-btn:active:not(:disabled) {
+            transform: translateY(6px);
+            box-shadow: 0 0px 0 transparent;
+        }
+
+        .nav-btn:disabled {
+            background: #B0BEC5;
+            box-shadow: 0 6px 0 #90A4AE;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .dialog {
+            width: 90%;
+            max-width: 400px;
+            background: white;
+            border-radius: 30px;
+            padding: 40px 20px;
+            text-align: center;
+            animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes pop {
+            from {
+                transform: scale(0.7);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="app-container">
+
+        <div id="home-screen" class="screen active">
+            <h1 style="color:#2196F3; font-size: 40px; margin-bottom: 40px; text-align: center;">Histology<br>Master 🔬</h1>
+            <p style="font-size: 18px; font-weight: bold; color: #555;">اختبار شامل للـ 34 شريحة</p>
+            <button class="btn-main" onclick="initQuiz()">ابدأ المراجعة</button>
+        </div>
+
+        <div id="quiz-screen" class="screen">
+            <div class="quiz-header">
+                <span class="close-btn" onclick="goHome()">✕</span>
+                <div class="progress-bar-bg">
+                    <div id="bar" class="progress-bar-fill"></div>
+                </div>
+                <div id="counter" style="font-weight: 800; min-width: 60px; font-size: 18px; direction: ltr; text-align: center;">0/0</div>
+            </div>
+
+            <div id="round-info">الجولة (1)</div>
+
+            <div class="question-box">
+                <div id="q-txt">تعرف على هذه الشريحة:</div>
+                <img id="q-img" class="content-image" src="" alt="Slide Image" style="display: none;">
+            </div>
+
+            <div class="options-container" id="opt-box"></div>
+
+            <div class="footer">
+                <button id="prev-btn" class="nav-btn prev" onclick="goPrev()">السابق</button>
+                <button id="next-btn" class="nav-btn next" onclick="goNext()">التالي</button>
+            </div>
+        </div>
+
+        <div id="win-overlay" class="overlay">
+            <div class="dialog">
+                <h1 style="color: var(--btn-green); font-size: 45px; margin: 0 0 15px 0;">بطل! 🎉</h1>
+                <p style="font-size: 22px; font-weight: 800; color: #333; margin-bottom: 30px;">لقد أتممت التعرف على جميع الـ 34 شريحة.</p>
+                <button class="btn-main" style="width: 100%; box-shadow: 0 6px 0 var(--btn-green-dark);" onclick="location.reload()">العودة للرئيسية</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // جميع الـ 34 شريحة مع بدائل مقتصرة حصرياً على الـ 10 أسماء المقررة لإحداث الحيرة.
+        const questionsBank = [
+            { img: "Aorta1.jpeg", opts: ["Aorta", "Inferior Vena Cava", "Kidney", "Lung"], correct: 0 },
+            { img: "Aorta2.jpeg", opts: ["Stomach fundus", "Aorta", "Thin Skin", "Inferior Vena Cava"], correct: 1 },
+            
+            { img: "Inferior Vena Cava1.jpeg", opts: ["Inferior Vena Cava", "Aorta", "Lymph node", "Ovary"], correct: 0 },
+            { img: "Inferior Vena Cava2.jpeg", opts: ["Thyroid Gland", "Inferior Vena Cava", "Aorta", "Testis"], correct: 1 },
+            { img: "Inferior Vena Cava3.jpeg", opts: ["Aorta", "Kidney", "Inferior Vena Cava", "Thin Skin"], correct: 2 },
+            
+            { img: "kidney1.jpeg", opts: ["Ovary", "Lymph node", "Kidney", "Thyroid Gland"], correct: 2 },
+            { img: "kidney2.jpeg", opts: ["Kidney", "Testis", "Lung", "Stomach fundus"], correct: 0 },
+            
+            { img: "lung1.jpeg", opts: ["Lung", "Lymph node", "Thyroid Gland", "Kidney"], correct: 0 },
+            { img: "lung2.jpeg", opts: ["Thin Skin", "Lung", "Stomach fundus", "Ovary"], correct: 1 },
+            { img: "lung3.jpeg", opts: ["Testis", "Ovary", "Lymph node", "Lung"], correct: 3 },
+            { img: "lung4.jpeg", opts: ["Lung", "Kidney", "Thyroid Gland", "Inferior Vena Cava"], correct: 0 },
+            { img: "lung5.jpeg", opts: ["Lymph node", "Stomach fundus", "Lung", "Testis"], correct: 2 },
+            
+            { img: "Lymph node1.jpeg", opts: ["Lymph node", "Ovary", "Lung", "Thyroid Gland"], correct: 0 },
+            { img: "Lymph node2.jpeg", opts: ["Testis", "Lymph node", "Kidney", "Aorta"], correct: 1 },
+            { img: "Lymph node3.jpeg", opts: ["Ovary", "Lung", "Lymph node", "Stomach fundus"], correct: 2 },
+            
+            { img: "Ovary1.jpeg", opts: ["Ovary", "Testis", "Lymph node", "Thyroid Gland"], correct: 0 },
+            { img: "Ovary2.jpeg", opts: ["Kidney", "Ovary", "Lung", "Stomach fundus"], correct: 1 },
+            { img: "Ovary3.jpeg", opts: ["Thyroid Gland", "Testis", "Ovary", "Lymph node"], correct: 2 },
+            { img: "Ovary4.jpeg", opts: ["Lymph node", "Kidney", "Testis", "Ovary"], correct: 3 },
+            { img: "Ovary5.jpeg", opts: ["Ovary", "Stomach fundus", "Lung", "Thin Skin"], correct: 0 },
+            
+            { img: "Stomach fundus1.jpeg", opts: ["Stomach fundus", "Thin Skin", "Aorta", "Inferior Vena Cava"], correct: 0 },
+            { img: "Stomach fundus2.jpeg", opts: ["Lung", "Stomach fundus", "Thyroid Gland", "Kidney"], correct: 1 },
+            { img: "Stomach fundus3.jpeg", opts: ["Thin Skin", "Ovary", "Stomach fundus", "Testis"], correct: 2 },
+            
+            { img: "Testis1.jpeg", opts: ["Testis", "Ovary", "Kidney", "Thyroid Gland"], correct: 0 },
+            { img: "Testis2.png", opts: ["Lymph node", "Testis", "Lung", "Ovary"], correct: 1 },
+            { img: "Testis3.png", opts: ["Thyroid Gland", "Kidney", "Testis", "Lymph node"], correct: 2 },
+            { img: "Testis4.jpeg", opts: ["Ovary", "Thyroid Gland", "Lymph node", "Testis"], correct: 3 },
+            
+            { img: "Thin Skin1.jpeg", opts: ["Thin Skin", "Stomach fundus", "Aorta", "Inferior Vena Cava"], correct: 0 },
+            { img: "Thin Skin2.jpeg", opts: ["Inferior Vena Cava", "Thin Skin", "Stomach fundus", "Lung"], correct: 1 },
+            { img: "Thin Skin3.jpeg", opts: ["Stomach fundus", "Aorta", "Thin Skin", "Lymph node"], correct: 2 },
+            { img: "Thin Skin4.jpeg", opts: ["Ovary", "Testis", "Kidney", "Thin Skin"], correct: 3 },
+            { img: "Thin Skin5.jpeg", opts: ["Thin Skin", "Lung", "Thyroid Gland", "Lymph node"], correct: 0 },
+            
+            { img: "Thyroid Gland1.jpeg", opts: ["Thyroid Gland", "Ovary", "Testis", "Kidney"], correct: 0 },
+            { img: "Thyroid Gland2.jpeg", opts: ["Kidney", "Lymph node", "Thyroid Gland", "Lung"], correct: 2 }
+        ];
+
+        let currentRoundQuestions = [];
+        let currentIndex = 0;
+        let currentRound = 1;
+
+        function goHome() {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('home-screen').classList.add('active');
+        }
+
+        function initQuiz() {
+            // إضافة خاصية q لجميع الأسئلة
+            let fullBank = questionsBank.map(q => {
+                q.q = "تعرف على هذه الشريحة:";
+                return q;
+            });
+
+            // خلط الأسئلة عشوائياً حتى لا يكون الترتيب محفوظاً
+            fullBank = fullBank.sort(() => Math.random() - 0.5);
+
+            prepareRound([...fullBank]);
+            currentRound = 1;
+
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('quiz-screen').classList.add('active');
+
+            loadQuestion();
+        }
+
+        function prepareRound(questionsArray) {
+            currentRoundQuestions = questionsArray.map(q => {
+                let newQ = JSON.parse(JSON.stringify(q));
+                newQ.shuffledIndices = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+                newQ.userAnswerIndex = null;
+                return newQ;
+            });
+            currentIndex = 0;
+        }
+
+        function updateProgressUI() {
+            let total = currentRoundQuestions.length;
+            let currentNum = currentIndex + 1;
+
+            document.getElementById('counter').innerText = `${currentNum} / ${total}`;
+            document.getElementById('bar').style.width = `${(currentNum / total) * 100}%`;
+            document.getElementById('round-info').innerText = `الجولة (${currentRound})`;
+        }
+
+        function loadQuestion() {
+            updateProgressUI();
+            const qData = currentRoundQuestions[currentIndex];
+
+            // تحميل الصورة
+            const qImg = document.getElementById('q-img');
+            qImg.src = qData.img;
+            qImg.style.display = 'block'; 
+
+            const box = document.getElementById('opt-box');
+            box.innerHTML = '';
+
+            let validIndices = qData.shuffledIndices;
+
+            validIndices.forEach(originalIdx => {
+                const btn = document.createElement('div');
+                btn.className = 'option-btn';
+                btn.innerText = qData.opts[originalIdx];
+
+                if (qData.userAnswerIndex === null) {
+                    btn.classList.add('active-click');
+                    btn.onclick = () => selectOption(btn, originalIdx, qData);
+                } else {
+                    btn.classList.add('locked');
+                    if (originalIdx === qData.correct) {
+                        btn.classList.add('correct');
+                    } else if (originalIdx === qData.userAnswerIndex) {
+                        btn.classList.add('wrong');
+                    }
+                }
+
+                box.appendChild(btn);
+            });
+
+            document.getElementById('prev-btn').disabled = (currentIndex === 0);
+
+            const nextBtn = document.getElementById('next-btn');
+            if (qData.userAnswerIndex === null) {
+                nextBtn.disabled = true;
+            } else {
+                nextBtn.disabled = false;
+            }
+
+            if (currentIndex === currentRoundQuestions.length - 1 && qData.userAnswerIndex !== null) {
+                nextBtn.innerText = "إنهاء الجولة";
+            } else {
+                nextBtn.innerText = "التالي";
+            }
+        }
+
+        function selectOption(selectedBtn, originalIdx, qData) {
+            qData.userAnswerIndex = originalIdx;
+
+            const allBtns = document.querySelectorAll('.option-btn');
+            allBtns.forEach(btn => {
+                btn.classList.remove('active-click');
+                btn.classList.add('locked');
+                btn.onclick = null;
+            });
+
+            let idxCounter = 0;
+            let validIndices = qData.shuffledIndices;
+
+            validIndices.forEach(idx => {
+                if (idx === qData.correct) {
+                    allBtns[idxCounter].classList.add('correct');
+                } else if (idx === qData.userAnswerIndex) {
+                    allBtns[idxCounter].classList.add('wrong');
+                }
+                idxCounter++;
+            });
+
+            const nextBtn = document.getElementById('next-btn');
+            nextBtn.disabled = false;
+            if (currentIndex === currentRoundQuestions.length - 1) {
+                nextBtn.innerText = "إنهاء الجولة";
+            }
+        }
+
+        function goPrev() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                loadQuestion();
+            }
+        }
+
+        function goNext() {
+            if (currentIndex < currentRoundQuestions.length - 1) {
+                currentIndex++;
+                loadQuestion();
+            } else {
+                evaluateRoundEnd();
+            }
+        }
+
+        function evaluateRoundEnd() {
+            let failedQuestions = currentRoundQuestions.filter(q => q.userAnswerIndex !== q.correct);
+
+            if (failedQuestions.length > 0) {
+                currentRound++;
+                let cleanFailed = failedQuestions.map(q => {
+                    return {
+                        q: q.q,
+                        img: q.img,
+                        opts: q.opts,
+                        correct: q.correct
+                    };
+                });
+
+                prepareRound(cleanFailed);
+                loadQuestion();
+            } else {
+                document.getElementById('win-overlay').style.display = 'flex';
+                confetti({
+                    particleCount: 300,
+                    spread: 100,
+                    origin: {
+                        y: 0.6
+                    },
+                    colors: ['#12D11E', '#2196F3', '#FFC107', '#E91E63']
+                });
+            }
+        }
+    </script>
+</body>
+
+</html>
